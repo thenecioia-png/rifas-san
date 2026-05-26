@@ -49,7 +49,7 @@ const nextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: `${process.env.NEXT_PUBLIC_API_URL || 'https://backend-202zrfmmh-thenecioia-6783s-projects.vercel.app'}/api/v1/:path*`,
+        destination: `${process.env.NEXT_PUBLIC_API_URL || 'https://backend-lrr5vke28-thenecioia-6783s-projects.vercel.app'}/api/v1/:path*`,
       },
     ];
   },
