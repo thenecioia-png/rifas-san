@@ -137,7 +137,7 @@ export default function DashboardPage() {
           
           {walletData?.data?.transactions?.length > 0 ? (
             <div className="space-y-3">
-              {walletData.data.transactions.slice(0, 5).map((tx: any) => (
+              {walletData?.data?.transactions?.slice(0, 5).map((tx: any) => (
                 <div
                   key={tx.id}
                   className="flex items-center justify-between py-3 border-b border-dark-800 last:border-0"
@@ -191,7 +191,7 @@ export default function DashboardPage() {
           
           {ticketsData?.data?.length > 0 ? (
             <div className="space-y-3">
-              {ticketsData.data.slice(0, 5).map((ticket: any) => (
+              {ticketsData?.data?.slice(0, 5).map((ticket: any) => (
                 <div
                   key={ticket.id}
                   className="flex items-center justify-between py-3 border-b border-dark-800 last:border-0"

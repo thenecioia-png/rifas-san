@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { User, Mail, Phone, Shield, Calendar } from 'lucide-react';
@@ -21,14 +21,17 @@ export default function ProfilePage() {
   const { data: user, isLoading } = useQuery({
     queryKey: ['me'],
     queryFn: () => usersApi.getMe(),
-    onSuccess: (data) => {
-      setFormData({
-        firstName: data.data.firstName || '',
-        lastName: data.data.lastName || '',
-        phone: data.data.phone || '',
-      });
-    },
   });
+
+  useEffect(() => {
+    if (user?.data) {
+      setFormData({
+        firstName: user.data.firstName || '',
+        lastName: user.data.lastName || '',
+        phone: user.data.phone || '',
+      });
+    }
+  }, [user]);
 
   const updateMutation = useMutation({
     mutationFn: (data: any) => usersApi.updateMe(data),
