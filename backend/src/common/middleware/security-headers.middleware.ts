@@ -25,13 +25,13 @@ export class SecurityHeadersMiddleware implements NestMiddleware {
     }
 
     // Request ID for tracing
-    const requestId = req.headers['x-request-id'] || this.generateRequestId();
+    const requestId = req.headers['x-request-id'] || SecurityHeadersMiddleware.generateRequestId();
     res.setHeader('X-Request-ID', requestId);
 
     next();
   }
 
-  private generateRequestId(): string {
+  private static generateRequestId(): string {
     return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   }
 }
