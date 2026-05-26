@@ -16,7 +16,7 @@ services:
   - type: web
     name: rifas-san-backend
     runtime: docker
-    repo: https://github.com/TU_USUARIO/TU_REPO.git
+    repo: https://github.com/thenecioia-png/rifas-san.git
     rootDir: backend
     dockerfilePath: ./Dockerfile
     envVars:
