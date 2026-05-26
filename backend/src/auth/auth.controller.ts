@@ -107,7 +107,7 @@ export class AuthController {
     @CurrentUser('id') userId: string,
     @Req() req: Request,
   ) {
-    const token = req.headers.authorization?.split(' ')[1];
+    const token = req.headers.authorization?.split(' ')[1] || '';
     return this.authService.logoutAllSessions(userId, token);
   }
 

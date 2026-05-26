@@ -36,7 +36,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     );
 
     return Promise.all(
-      models.map((modelKey) => this[modelKey as string].deleteMany()),
+      models.map((modelKey) => (this as any)[modelKey as string].deleteMany()),
     );
   }
 }

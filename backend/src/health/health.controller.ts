@@ -9,6 +9,11 @@ export class HealthController {
     private readonly redis: RedisService,
   ) {}
 
+  @Get('ping')
+  ping() {
+    return { status: 'ok', timestamp: new Date().toISOString() };
+  }
+
   @Get()
   async check() {
     const checks: any = {

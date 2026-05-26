@@ -60,8 +60,8 @@ export class AuditInterceptor implements NestInterceptor {
     );
   }
 
-  private mapMethodToAction(method: string): any {
-    const mapping = {
+  private mapMethodToAction(method: string): string {
+    const mapping: Record<string, string> = {
       POST: 'CREATE',
       PUT: 'UPDATE',
       PATCH: 'UPDATE',

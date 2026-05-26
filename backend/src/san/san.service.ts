@@ -6,6 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { SanMember, SanSchedule } from '@prisma/client';
 
 @Injectable()
 export class SanService {
@@ -70,7 +71,7 @@ export class SanService {
     }
 
     // Check if user is already a member
-    const existingMember = sanGroup.members.find((m) => m.userId === userId);
+    const existingMember = sanGroup.members.find((m: SanMember) => m.userId === userId);
     if (existingMember) {
       throw new ConflictException('User is already a member of this SAN group');
     }
@@ -115,14 +116,14 @@ export class SanService {
       );
 
       // Find recipient for this round (turn-based)
-      const recipient = sanGroup.members.find((m) => m.turnNumber === round);
+      const recipient = sanGroup.members.find((m: SanMember) => m.turnNumber === round);
 
       schedule.push({
         sanGroupId,
         roundNumber: round,
         dueDate,
         recipientMemberId: recipient?.id,
-        amount: sanGroup.contributionAmount * sanGroup.totalMembers,
+        amount: Number(sanGroup.contributionAmount) * sanGroup.totalMembers,
       });
     }
 
@@ -168,17 +169,17 @@ export class SanService {
       throw new NotFoundException('SAN group not found');
     }
 
-    const member = sanGroup.members.find((m) => m.id === memberId);
+    const member = sanGroup.members.find((m: SanMember) => m.id === memberId);
     if (!member) {
       throw new NotFoundException('Member not found in this SAN group');
     }
 
     const schedule = sanGroup.schedule.find(
-      (s) => s.roundNumber === roundNumber,
+      (s: SanSchedule) => s.roundNumber === roundNumber,
     );
 
     if (!schedule) {
-      throw NotFoundException('Round not found');
+      throw new NotFoundException('Round not found');
     }
 
     // Calculate late fee if applicable
@@ -190,7 +191,7 @@ export class SanService {
       );
       if (daysLate > sanGroup.gracePeriodDays) {
         lateFee =
-          (sanGroup.contributionAmount * sanGroup.lateFeePercentage) / 100;
+          (Number(sanGroup.contributionAmount) * Number(sanGroup.lateFeePercentage)) / 100;
       }
     }
 

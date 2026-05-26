@@ -4,6 +4,7 @@ import {
   BadRequestException,
   Logger,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -55,7 +56,7 @@ export class WalletService {
       throw new BadRequestException('Amount must be greater than 0');
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    return this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const wallet = await tx.wallet.findUnique({
         where: { userId },
       });
@@ -102,7 +103,7 @@ export class WalletService {
       throw new BadRequestException('Amount must be greater than 0');
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    return this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const wallet = await tx.wallet.findUnique({
         where: { userId },
       });

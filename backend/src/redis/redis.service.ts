@@ -13,14 +13,17 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
   onModuleInit() {
     const redisUrl = this.configService.get<string>('REDIS_URL');
+    if (!redisUrl) {
+      throw new Error('REDIS_URL is not defined');
+    }
     
     this.client = new Redis(redisUrl, {
       retryStrategy: (times) => Math.min(times * 50, 2000),
       maxRetriesPerRequest: 3,
     });
 
-    this.pubClient = new Redis(redisUrl);
-    this.subClient = new Redis(redisUrl);
+    this.pubClient = new Redis(redisUrl!);
+    this.subClient = new Redis(redisUrl!);
 
     this.client.on('connect', () => this.logger.log('✅ Redis connected'));
     this.client.on('error', (err) => this.logger.error('Redis error:', err));

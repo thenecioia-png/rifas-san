@@ -1,16 +1,18 @@
 # ============================================
-# RENDER.COM BLUEPRINT - DEPLOY GRATIS
+# RENDER.COM BLUEPRINT - 24/7 GRATIS CON PING
 # ============================================
-# Este archivo permite desplegar TODO con un solo click en Render.com
-# 
-# INSTRUCCIONES:
-# 1. Crea cuenta gratis en https://render.com (con GitHub)
-# 2. Crea un Blueprint desde este repositorio
-# 3. Render despliega automaticamente backend + PostgreSQL
+# NOTA: PostgreSQL y Redis se usan EXTERNOS (Neon + Upstash)
+# porque la DB gratis de Render se BORRA a los 30 dias.
+#
+# ANTES DE DESPLEGAR:
+# 1. Crear cuenta en https://render.com (GitHub)
+# 2. Crear cuenta en https://neon.tech -> copiar DATABASE_URL
+# 3. Crear cuenta en https://upstash.com -> copiar REDIS_URL
+# 4. Editar las variables FRONTEND_URL, DATABASE_URL, REDIS_URL abajo
+# 5. Subir a GitHub y crear Blueprint en Render
 # ============================================
 
 services:
-  # BACKEND API
   - type: web
     name: rifas-san-backend
     runtime: docker
@@ -24,55 +26,23 @@ services:
         value: 3001
       - key: HOST
         value: 0.0.0.0
-      - key: DATABASE_URL
-        fromDatabase:
-          name: rifas-san-db
-          property: connectionString
-      - key: REDIS_URL
-        fromService:
-          type: redis
-          name: rifas-san-redis
-          property: connectionString
-      - key: JWT_SECRET
-        generateValue: true
-      - key: JWT_REFRESH_SECRET
-        generateValue: true
+      - key: RENDER
+        value: "true"
+      - key: SELF_URL
+        value: https://rifas-san-backend.onrender.com
       - key: API_PREFIX
         value: /api/v1
       - key: FRONTEND_URL
         value: https://TU_FRONTEND.vercel.app
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: COOKIE_SECRET
+        generateValue: true
     healthCheckPath: /api/v1/health
     autoDeploy: true
-
-  # FRONTEND (opcional en Render, mejor en Vercel)
-  - type: web
-    name: rifas-san-frontend
-    runtime: docker
-    repo: https://github.com/TU_USUARIO/TU_REPO.git
-    rootDir: frontend
-    dockerfilePath: ./Dockerfile
-    envVars:
-      - key: NEXT_PUBLIC_API_URL
-        fromService:
-          type: web
-          name: rifas-san-backend
-          property: url
-    autoDeploy: true
-
-databases:
-  - name: rifas-san-db
-    databaseName: rifas_san_db
-    user: rifas_admin
-    plan: free
-    postgresMajorVersion: "16"
-    ipAllowList:
-      - source: 0.0.0.0/0
-        description: everywhere
-
-redis:
-  - name: rifas-san-redis
-    plan: free
-    maxmemoryPolicy: allkeys-lru
-    ipAllowList:
-      - source: 0.0.0.0/0
-        description: everywhere

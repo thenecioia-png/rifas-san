@@ -15,6 +15,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
 import { WebsocketModule } from './websocket/websocket.module';
 import { HealthModule } from './health/health.module';
+import { KeepAliveModule } from './common/services/keep-alive.module';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { SecurityHeadersMiddleware } from './common/middleware/security-headers.middleware';
 
@@ -41,6 +42,7 @@ import { SecurityHeadersMiddleware } from './common/middleware/security-headers.
     AdminModule,
     WebsocketModule,
     HealthModule,
+    KeepAliveModule,
   ],
   providers: [
     {

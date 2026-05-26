@@ -2,8 +2,8 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import helmet from 'helmet';
-import * as compression from 'compression';
-import * as cookieParser from 'cookie-parser';
+import compression from 'compression';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { AuditInterceptor } from './common/interceptors/audit.interceptor';
@@ -44,7 +44,7 @@ async function bootstrap() {
   app.use(new SecurityHeadersMiddleware().use);
 
   // Global Pipes
-  app.useGlobalPipe(
+  app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
       forbidNonWhitelisted: true,
@@ -58,10 +58,7 @@ async function bootstrap() {
 
   // Global Filters & Interceptors
   app.useGlobalFilters(new HttpExceptionFilter());
-  app.useGlobalInterceptors(
-    new TransformInterceptor(),
-    new AuditInterceptor(),
-  );
+  app.useGlobalInterceptors(new TransformInterceptor());
 
   // API Prefix
   app.setGlobalPrefix('api/v1');
