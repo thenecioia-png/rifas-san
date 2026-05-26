@@ -1,0 +1,78 @@
+# ============================================
+# RENDER.COM BLUEPRINT - DEPLOY GRATIS
+# ============================================
+# Este archivo permite desplegar TODO con un solo click en Render.com
+# 
+# INSTRUCCIONES:
+# 1. Crea cuenta gratis en https://render.com (con GitHub)
+# 2. Crea un Blueprint desde este repositorio
+# 3. Render despliega automaticamente backend + PostgreSQL
+# ============================================
+
+services:
+  # BACKEND API
+  - type: web
+    name: rifas-san-backend
+    runtime: docker
+    repo: https://github.com/TU_USUARIO/TU_REPO.git
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: HOST
+        value: 0.0.0.0
+      - key: DATABASE_URL
+        fromDatabase:
+          name: rifas-san-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: rifas-san-redis
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: API_PREFIX
+        value: /api/v1
+      - key: FRONTEND_URL
+        value: https://TU_FRONTEND.vercel.app
+    healthCheckPath: /api/v1/health
+    autoDeploy: true
+
+  # FRONTEND (opcional en Render, mejor en Vercel)
+  - type: web
+    name: rifas-san-frontend
+    runtime: docker
+    repo: https://github.com/TU_USUARIO/TU_REPO.git
+    rootDir: frontend
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          type: web
+          name: rifas-san-backend
+          property: url
+    autoDeploy: true
+
+databases:
+  - name: rifas-san-db
+    databaseName: rifas_san_db
+    user: rifas_admin
+    plan: free
+    postgresMajorVersion: "16"
+    ipAllowList:
+      - source: 0.0.0.0/0
+        description: everywhere
+
+redis:
+  - name: rifas-san-redis
+    plan: free
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList:
+      - source: 0.0.0.0/0
+        description: everywhere

@@ -1,0 +1,565 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../backend/node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  MODERATOR
+  USER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PENDING_VERIFICATION
+  BLOCKED
+}
+
+enum RaffleStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  SOLD_OUT
+  DRAWN
+  CANCELLED
+  COMPLETED
+}
+
+enum TicketStatus {
+  AVAILABLE
+  RESERVED
+  SOLD
+  CANCELLED
+}
+
+enum SanGroupStatus {
+  PENDING
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum SanMemberStatus {
+  ACTIVE
+  PENDING
+  LATE
+  DEFAULTED
+  REMOVED
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  PAID
+  FAILED
+  REFUNDED
+  DISPUTED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  STRIPE
+  MERCADOPAGO
+  PAYPAL
+  BANK_TRANSFER
+  CASH
+  WALLET
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  PAYMENT
+  REFUND
+  TRANSFER
+  FEE
+  COMMISSION
+  BONUS
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REVERSED
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+  PAYMENT
+  REFUND
+  DRAW
+  TICKET_PURCHASE
+  SAN_PAYMENT
+  USER_BLOCK
+  USER_UNBLOCK
+  ROLE_CHANGE
+  SETTINGS_CHANGE
+  EXPORT
+  BACKUP
+}
+
+enum NotificationType {
+  EMAIL
+  WHATSAPP
+  PUSH
+  SMS
+  IN_APP
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
+// ============================================
+// USERS
+// ============================================
+model User {
+  id              String     @id @default(cuid())
+  email           String     @unique @db.VarChar(255)
+  password        String     @db.VarChar(255)
+  firstName       String     @db.VarChar(100)
+  lastName        String     @db.VarChar(100)
+  phone           String?    @db.VarChar(20)
+  documentId      String?    @db.VarChar(50) @unique
+  dateOfBirth     DateTime?
+  avatar          String?
+  role            UserRole   @default(USER)
+  status          UserStatus @default(PENDING_VERIFICATION)
+  emailVerified   Boolean    @default(false)
+  phoneVerified   Boolean    @default(false)
+  twoFactorEnabled Boolean   @default(false)
+  twoFactorSecret String?    @db.VarChar(255)
+  lastLoginAt     DateTime?
+  lastLoginIp     String?    @db.VarChar(45)
+  failedLoginAttempts Int    @default(0)
+  lockedUntil     DateTime?
+  
+  // Relaciones
+  sessions        Session[]
+  tickets         Ticket[]
+  sanMembers      SanMember[]
+  payments        Payment[]
+  wallet          Wallet?
+  transactions    Transaction[]
+  auditLogs       AuditLog[]
+  notifications   Notification[]
+  rafflesCreated  Raffle[]   @relation("RaffleCreator")
+  
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  deletedAt       DateTime?
+
+  @@index([email])
+  @@index([role])
+  @@index([status])
+  @@index([documentId])
+  @@index([createdAt])
+  @@map("users")
+}
+
+// ============================================
+// SESIONES
+// ============================================
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  token        String   @unique @db.VarChar(512)
+  refreshToken String   @unique @db.VarChar(512)
+  ipAddress    String   @db.VarChar(45)
+  userAgent    String   @db.Text
+  expiresAt    DateTime
+  refreshExpiresAt DateTime
+  isRevoked    Boolean  @default(false)
+  
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt    DateTime @default(now())
+  lastUsedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([token])
+  @@index([isRevoked])
+  @@map("sessions")
+}
+
+// ============================================
+// RIFAS
+// ============================================
+model Raffle {
+  id              String       @id @default(cuid())
+  title           String       @db.VarChar(255)
+  description     String       @db.Text
+  imageUrl        String?
+  prizeName       String       @db.VarChar(255)
+  prizeValue      Decimal      @db.Decimal(15, 2)
+  prizeDescription String?     @db.Text
+  ticketPrice     Decimal      @db.Decimal(15, 2)
+  totalTickets    Int
+  ticketsSold     Int          @default(0)
+  startDate       DateTime
+  endDate         DateTime
+  drawDate        DateTime
+  status          RaffleStatus @default(DRAFT)
+  drawType        String       @default("CRYPTO") @db.VarChar(20)
+  drawResult      String?      @db.VarChar(255)
+  winningTicketId String?      @unique
+  
+  // Relaciones
+  createdBy       String
+  creator         User         @relation("RaffleCreator", fields: [createdBy], references: [id])
+  tickets         Ticket[]
+  
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([status])
+  @@index([endDate])
+  @@index([drawDate])
+  @@index([createdBy])
+  @@map("raffles")
+}
+
+// ============================================
+// BOLETOS / NÚMEROS
+// ============================================
+model Ticket {
+  id              String       @id @default(cuid())
+  raffleId        String
+  userId          String?
+  ticketNumber    Int
+  status          TicketStatus @default(AVAILABLE)
+  reservationExpiresAt DateTime?
+  pricePaid       Decimal?     @db.Decimal(15, 2)
+  purchasedAt     DateTime?
+  
+  // Relaciones
+  raffle          Raffle       @relation(fields: [raffleId], references: [id], onDelete: Cascade)
+  user            User?        @relation(fields: [userId], references: [id])
+  payment         Payment?
+  
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@unique([raffleId, ticketNumber])
+  @@index([raffleId])
+  @@index([userId])
+  @@index([status])
+  @@index([reservationExpiresAt])
+  @@map("tickets")
+}
+
+// ============================================
+// GRUPOS SAN
+// ============================================
+model SanGroup {
+  id              String         @id @default(cuid())
+  name            String         @db.VarChar(255)
+  description     String?        @db.Text
+  totalMembers    Int
+  contributionAmount Decimal     @db.Decimal(15, 2)
+  frequency       String         @db.VarChar(20) // WEEKLY, BIWEEKLY, MONTHLY
+  startDate       DateTime
+  endDate         DateTime?
+  status          SanGroupStatus @default(PENDING)
+  currentRound    Int            @default(1)
+  totalRounds     Int
+  lateFeePercentage Decimal      @default(5.00) @db.Decimal(5, 2)
+  gracePeriodDays Int            @default(3)
+  
+  // Relaciones
+  members         SanMember[]
+  payments        SanPayment[]
+  schedule        SanSchedule[]
+  
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([status])
+  @@index([startDate])
+  @@map("san_groups")
+}
+
+// ============================================
+// MIEMBROS SAN
+// ============================================
+model SanMember {
+  id              String         @id @default(cuid())
+  sanGroupId      String
+  userId          String
+  turnNumber      Int
+  status          SanMemberStatus @default(PENDING)
+  joinedAt        DateTime       @default(now())
+  removedAt       DateTime?
+  removalReason   String?        @db.Text
+  
+  // Relaciones
+  sanGroup        SanGroup       @relation(fields: [sanGroupId], references: [id], onDelete: Cascade)
+  user            User           @relation(fields: [userId], references: [id])
+  payments        SanPayment[]
+  
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@unique([sanGroupId, userId])
+  @@unique([sanGroupId, turnNumber])
+  @@index([sanGroupId])
+  @@index([userId])
+  @@index([status])
+  @@map("san_members")
+}
+
+// ============================================
+// CRONOGRAMA SAN
+// ============================================
+model SanSchedule {
+  id              String   @id @default(cuid())
+  sanGroupId      String
+  roundNumber     Int
+  dueDate         DateTime
+  recipientMemberId String?
+  isPaid          Boolean  @default(false)
+  paidAt          DateTime?
+  amount          Decimal  @db.Decimal(15, 2)
+  
+  sanGroup        SanGroup @relation(fields: [sanGroupId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([sanGroupId, roundNumber])
+  @@index([sanGroupId])
+  @@index([dueDate])
+  @@map("san_schedule")
+}
+
+// ============================================
+// PAGOS SAN
+// ============================================
+model SanPayment {
+  id              String      @id @default(cuid())
+  sanGroupId      String
+  memberId        String
+  roundNumber     Int
+  amount          Decimal     @db.Decimal(15, 2)
+  lateFee         Decimal     @default(0) @db.Decimal(15, 2)
+  totalPaid       Decimal     @db.Decimal(15, 2)
+  status          PaymentStatus @default(PENDING)
+  paymentMethod   PaymentMethod?
+  paymentReference String?    @db.VarChar(255)
+  paidAt          DateTime?
+  
+  sanGroup        SanGroup    @relation(fields: [sanGroupId], references: [id])
+  member          SanMember   @relation(fields: [memberId], references: [id])
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([sanGroupId])
+  @@index([memberId])
+  @@index([status])
+  @@map("san_payments")
+}
+
+// ============================================
+// PAGOS GENERALES
+// ============================================
+model Payment {
+  id              String       @id @default(cuid())
+  userId          String
+  ticketId        String?      @unique
+  amount          Decimal      @db.Decimal(15, 2)
+  fee             Decimal      @default(0) @db.Decimal(15, 2)
+  totalAmount     Decimal      @db.Decimal(15, 2)
+  currency        String       @default("USD") @db.VarChar(3)
+  status          PaymentStatus @default(PENDING)
+  method          PaymentMethod
+  providerRef     String?      @db.VarChar(255)
+  providerResponse Json?
+  webhookReceived Boolean      @default(false)
+  webhookData     Json?
+  refundedAmount  Decimal      @default(0) @db.Decimal(15, 2)
+  refundedAt      DateTime?
+  refundReason    String?      @db.Text
+  ipAddress       String       @db.VarChar(45)
+  userAgent       String       @db.Text
+  
+  user            User         @relation(fields: [userId], references: [id])
+  ticket          Ticket?      @relation(fields: [ticketId], references: [id])
+  
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([providerRef])
+  @@index([createdAt])
+  @@map("payments")
+}
+
+// ============================================
+// WALLETS
+// ============================================
+model Wallet {
+  id              String        @id @default(cuid())
+  userId          String        @unique
+  balance         Decimal       @default(0) @db.Decimal(15, 2)
+  lockedBalance   Decimal       @default(0) @db.Decimal(15, 2)
+  totalDeposited  Decimal       @default(0) @db.Decimal(15, 2)
+  totalWithdrawn  Decimal       @default(0) @db.Decimal(15, 2)
+  
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions    Transaction[]
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@map("wallets")
+}
+
+// ============================================
+// TRANSACCIONES
+// ============================================
+model Transaction {
+  id              String           @id @default(cuid())
+  walletId        String
+  userId          String
+  type            TransactionType
+  amount          Decimal          @db.Decimal(15, 2)
+  balanceAfter    Decimal          @db.Decimal(15, 2)
+  status          TransactionStatus @default(PENDING)
+  description     String           @db.VarChar(500)
+  referenceId     String?          @db.VarChar(255)
+  referenceType   String?          @db.VarChar(50)
+  metadata        Json?
+  
+  wallet          Wallet           @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  user            User             @relation(fields: [userId], references: [id])
+  
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([walletId])
+  @@index([userId])
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+  @@map("transactions")
+}
+
+// ============================================
+// AUDITORÍA
+// ============================================
+model AuditLog {
+  id              String      @id @default(cuid())
+  userId          String?
+  action          AuditAction
+  entityType      String      @db.VarChar(50)
+  entityId        String?     @db.VarChar(255)
+  oldValues       Json?
+  newValues       Json?
+  description     String      @db.Text
+  ipAddress       String      @db.VarChar(45)
+  userAgent       String      @db.Text
+  requestMethod   String      @db.VarChar(10)
+  requestPath     String      @db.VarChar(500)
+  requestBody     Json?
+  statusCode      Int?
+  durationMs      Int?
+  
+  user            User?       @relation(fields: [userId], references: [id])
+  
+  createdAt       DateTime    @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([entityType])
+  @@index([createdAt])
+  @@index([ipAddress])
+  @@map("audit_logs")
+}
+
+// ============================================
+// NOTIFICACIONES
+// ============================================
+model Notification {
+  id              String             @id @default(cuid())
+  userId          String
+  type            NotificationType
+  status          NotificationStatus @default(PENDING)
+  title           String             @db.VarChar(255)
+  message         String             @db.Text
+  data            Json?
+  sentAt          DateTime?
+  deliveredAt     DateTime?
+  readAt          DateTime?
+  failedReason    String?            @db.Text
+  
+  user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@index([userId])
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+// ============================================
+// CONFIGURACIÓN DEL SISTEMA
+// ============================================
+model SystemConfig {
+  id              String   @id @default(cuid())
+  key             String   @unique @db.VarChar(100)
+  value           Json
+  description     String?  @db.Text
+  isEncrypted     Boolean  @default(false)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("system_config")
+}
+
+// ============================================
+// BACKUPS
+// ============================================
+model BackupLog {
+  id              String   @id @default(cuid())
+  filename        String   @db.VarChar(255)
+  sizeBytes       BigInt
+  status          String   @db.VarChar(20)
+  startedAt       DateTime @default(now())
+  completedAt     DateTime?
+  errorMessage    String?  @db.Text
+  storedLocation  String   @db.VarChar(500)
+  checksum        String   @db.VarChar(64)
+  
+  createdAt       DateTime @default(now())
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("backup_logs")
+}
